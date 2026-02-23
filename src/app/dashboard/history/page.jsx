@@ -38,6 +38,12 @@ export default function HistoryPage() {
 
   return (
     <div className="p-6">
+      <button
+        onClick={() => router.push("/dashboard")}
+        className="mb-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+      >
+        Dashboard
+      </button>
       <h1 className="text-2xl font-bold mb-6">Analysis History</h1>
 
       {analyses.length === 0 && <p>No past analyses found.</p>}

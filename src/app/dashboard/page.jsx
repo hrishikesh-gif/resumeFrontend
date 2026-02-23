@@ -155,7 +155,7 @@ export default function Dashboard() {
 
             <div>
               <label className="block mb-2 text-sm text-gray-400">
-                Job Role
+                Job Role *
               </label>
               <input
                 type="text"
@@ -183,17 +183,23 @@ export default function Dashboard() {
                 Upload Resume *
               </label>
               <input
-                type="file"
-                multiple
-                accept=".pdf,.doc,.docx"
-                onChange={(e) => setFiles(e.target.files)}
-              />
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => setFiles(e.target.files)}
+                  className="block w-full text-sm text-gray-700 
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-blue-600 file:text-white
+                            hover:file:bg-blue-700
+                            cursor-pointer"
+            />
             </div>
-
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-yellow-600 hover:bg-yellow-700 text-black py-3 rounded font-semibold"
+              className="w-full bg-yellow-600 hover:bg-green-500 text-black py-3 rounded font-semibold"
             >
               {loading ? "Submitting..." : "Analyze Resume"}
             </button>

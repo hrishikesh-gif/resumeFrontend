@@ -1,65 +1,38 @@
 "use client";
 
-import { useState } from "react";
-import axios from "axios";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const [file, setFile] = useState(null);
-  const [response, setResponse] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-
-  const handleUpload = async () => {
-    if (!file) {
-      alert("Please select a resume file");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      setLoading(true);
-
-      const res = await axios.post(
-        "http://localhost:8000/resumes/analyze", // ⚠ change if different
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      setResponse(res.data);
-    } catch (error) {
-      console.error("Upload error:", error);
-      alert("Upload failed. Check backend.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const router = useRouter();
 
   return (
-    <div style={{ padding: "40px", fontFamily: "Arial" }}>
-      <h1>Resume Filtration System 🚀</h1>
+    <div className="min-h-screen flex items-center justify-center 
+                    bg-gradient-to-br from-black via-gray-900 to-gray-800">
 
-      <input type="file" onChange={handleFileChange} />
-      <br /><br />
+      <div className="text-center px-6">
 
-      <button onClick={handleUpload} disabled={loading}>
-        {loading ? "Uploading..." : "Upload Resume"}
-      </button>
+        <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          Resume Filtration System 🚀
+        </h1>
 
-      {response && (
-        <div style={{ marginTop: "30px" }}>
-          <h2>Filtered Result:</h2>
-          <pre>{JSON.stringify(response, null, 2)}</pre>
-        </div>
-      )}
+        <p className="text-gray-400 mb-10 text-lg">
+          Smart AI-powered resume ranking for Arista's HR Department.
+        </p>
+
+        <button
+          onClick={() => router.push("/login")}
+          className="bg-white text-black px-8 py-3 rounded-lg 
+                     font-semibold hover:bg-gray-200 transition"
+        >
+          Analyze Now
+        </button>
+        
+        {/* Footer */}
+         <footer className="text-center py-4 text-gray-500 text-sm">
+         © 2026 AristaSystems.in Built with ❤️
+         </footer>
+     
+      </div>
     </div>
   );
 }

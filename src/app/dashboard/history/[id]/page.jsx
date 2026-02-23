@@ -1,10 +1,65 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+
+/* ================= Candidate Card Component ================= */
+function CandidateCard({ candidate }) {
+  const [showAll, setShowAll] = useState(false);
+
+  const skills = candidate.matched_skills || [];
+  const visibleSkills = showAll ? skills : skills.slice(0, 3);
+
+  return (
+    <div className="border p-4 rounded shadow">
+      <div className="flex justify-between">
+        <h2 className="font-semibold text-lg">
+          {candidate.name}
+        </h2>
+        <span className="font-bold text-blue-600">
+          {candidate.match_score}%
+        </span>
+      </div>
+
+      <p>Email: {candidate.email}</p>
+      <p>Contact: {candidate.contact_number}</p>
+      <p>
+        Priority:{" "}
+        <span className="font-medium">
+          {candidate.interview_priority}
+        </span>
+      </p>
+
+      {skills.length > 0 && (
+        <div className="mt-3">
+          <p className="font-medium">Matched Skills:</p>
+
+          <ul className="list-disc list-inside mt-1 text-sm text-gray-300">
+            {visibleSkills.map((skill, index) => (
+              <li key={index}>{skill}</li>
+            ))}
+          </ul>
+
+          {skills.length > 3 && (
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="text-blue-600 text-sm mt-1 hover:underline"
+            >
+              {showAll ? "Show Less" : "Show More"}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================= Detail Page ================= */
 
 export default function DetailPage() {
   const { id } = useParams();
+  const router = useRouter();
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,13 +89,60 @@ export default function DetailPage() {
     fetchDetail();
   }, [id]);
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  const handleDelete = async () => {
+    const confirmDelete = window.confirm(
+      "⚠️ Are you sure you want to delete this analysis? This action cannot be undone."
+    );
 
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(
+        `http://localhost:8000/resumes/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (res.ok) {
+        alert("✅ Analysis deleted successfully");
+        router.push("/dashboard/history");
+      } else {
+        alert("❌ Failed to delete analysis");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("Something went wrong");
+    }
+  };
+
+  if (loading) return <div className="p-6">Loading...</div>;
   if (!data) return <div className="p-6">No data found.</div>;
 
   if (data.status === "processing") {
     return (
       <div className="p-6">
+        <div className="flex gap-3 mb-4">
+          <button
+            onClick={() => router.back()}
+            className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
+          >
+            ← Back
+          </button>
+
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Dashboard
+          </button>
+        </div>
+
         <h2 className="text-xl font-semibold">
           Analysis still processing...
         </h2>
@@ -50,14 +152,58 @@ export default function DetailPage() {
 
   if (data.status === "failed") {
     return (
-      <div className="p-6 text-red-600">
-        Analysis failed. Please try again.
+      <div className="p-6">
+        <div className="flex gap-3 mb-4">
+          <button
+            onClick={() => router.back()}
+            className="bg-green-200 px-4 py-2 text-black rounded hover:bg-gray-300"
+          >
+            Back
+          </button>
+
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Dashboard
+          </button>
+        </div>
+
+        <div className="text-red-600">
+          Analysis failed. Please try again.
+        </div>
       </div>
     );
   }
 
   return (
     <div className="p-6">
+      {/* Top Action Bar */}
+      <div className="flex justify-between mb-6">
+        <div className="flex gap-3">
+          <button
+            onClick={() => router.back()}
+            className="bg-gray-200 px-4 py-2 text-black rounded hover:bg-gray-300"
+          >
+            Back
+          </button>
+
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Dashboard
+          </button>
+        </div>
+
+        <button
+          onClick={handleDelete}
+          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+        >
+          Delete
+        </button>
+      </div>
+
       <h1 className="text-2xl font-bold mb-4">
         {data.job_role} - Results
       </h1>
@@ -77,28 +223,10 @@ export default function DetailPage() {
       <div className="space-y-4">
         {data.results &&
           data.results.map((candidate) => (
-            <div
+            <CandidateCard
               key={candidate.file_name}
-              className="border p-4 rounded shadow"
-            >
-              <div className="flex justify-between">
-                <h2 className="font-semibold text-lg">
-                  {candidate.name}
-                </h2>
-                <span className="font-bold text-blue-600">
-                  {candidate.match_score}%
-                </span>
-              </div>
-
-              <p>Email: {candidate.email}</p>
-              <p>Contact: {candidate.contact_number}</p>
-              <p>
-                Priority:{" "}
-                <span className="font-medium">
-                  {candidate.interview_priority}
-                </span>
-              </p>
-            </div>
+              candidate={candidate}
+            />
           ))}
       </div>
     </div>
