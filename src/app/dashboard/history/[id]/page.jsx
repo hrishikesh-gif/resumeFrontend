@@ -62,6 +62,7 @@ export default function DetailPage() {
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -77,17 +78,48 @@ export default function DetailPage() {
           }
         );
 
+        // 🔥 Handle all status codes
+        if (!res.ok) {
+          switch (res.status) {
+            case 401:
+              localStorage.removeItem("token");
+              router.push("/login");
+              return;
+
+            case 403:
+              setError("🚫 Access denied.");
+              return;
+
+            case 404:
+              setError("❌ Analysis not found.");
+              return;
+
+            case 429:
+              setError("⚠️ Quota exceeded. Please try again later.");
+              return;
+
+            case 500:
+              setError("🔥 Server error. Please retry.");
+              return;
+
+            default:
+              setError("Something went wrong.");
+              return;
+          }
+        }
+
         const result = await res.json();
         setData(result);
-      } catch (error) {
-        console.error("Error fetching detail:", error);
+
+      } catch (err) {
+        setError("Network error. Please check your connection.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchDetail();
-  }, [id]);
+  }, [id, router]);
 
   const handleDelete = async () => {
     const confirmDelete = window.confirm(
@@ -109,19 +141,25 @@ export default function DetailPage() {
         }
       );
 
-      if (res.ok) {
-        alert("✅ Analysis deleted successfully");
-        router.push("/dashboard/history");
-      } else {
-        alert("❌ Failed to delete analysis");
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        router.push("/login");
+        return;
       }
+
+      if (!res.ok) {
+        alert("Failed to delete analysis.");
+        return;
+      }
+
+      alert("✅ Analysis deleted successfully");
+      router.push("/dashboard/history");
+
     } catch (error) {
-      console.error("Delete error:", error);
       alert("Something went wrong");
     }
   };
 
-  /* ✅ UPDATED DOWNLOAD FUNCTION */
   const handleDownload = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -135,8 +173,20 @@ export default function DetailPage() {
         }
       );
 
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        router.push("/login");
+        return;
+      }
+
+      if (response.status === 429) {
+        alert("⚠️ Quota exceeded. Cannot download.");
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error("Download failed");
+        alert("Download failed.");
+        return;
       }
 
       const blob = await response.blob();
@@ -162,11 +212,38 @@ export default function DetailPage() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+
     } catch (error) {
-      console.error("Download error:", error);
-      alert("❌ Download failed");
+      alert("Download failed.");
     }
   };
+
+  // 🔥 Error UI
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
+          {error}
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-yellow-500 text-white px-4 py-2 rounded"
+          >
+            Retry
+          </button>
+
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+          >
+            Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) return <div className="p-6">Loading...</div>;
   if (!data) return <div className="p-6">No data found.</div>;
@@ -174,22 +251,6 @@ export default function DetailPage() {
   if (data.status === "processing") {
     return (
       <div className="p-6">
-        <div className="flex gap-3 mb-4">
-          <button
-            onClick={() => router.back()}
-            className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
-          >
-            ← Back
-          </button>
-
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Dashboard
-          </button>
-        </div>
-
         <h2 className="text-xl font-semibold">
           Analysis still processing...
         </h2>
@@ -200,22 +261,6 @@ export default function DetailPage() {
   if (data.status === "failed") {
     return (
       <div className="p-6">
-        <div className="flex gap-3 mb-4">
-          <button
-            onClick={() => router.back()}
-            className="bg-green-200 px-4 py-2 text-black rounded hover:bg-gray-300"
-          >
-            Back
-          </button>
-
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Dashboard
-          </button>
-        </div>
-
         <div className="text-red-600">
           Analysis failed. Please try again.
         </div>
@@ -258,7 +303,6 @@ export default function DetailPage() {
         Total Resumes: {data.total_resumes}
       </p>
 
-      {/* ✅ UPDATED DOWNLOAD BUTTON */}
       <button
         onClick={handleDownload}
         className="inline-block mb-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
