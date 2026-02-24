@@ -6,11 +6,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // ✅ added
 
  const handleLogin = async (e) => {
   e.preventDefault();
 
-  // ✅ Prevent empty submission
   if (!email || !password) {
     alert("Please fill all fields ❌");
     return;
@@ -25,7 +25,7 @@ export default function LoginPage() {
 
     const res = await api.post(
       "/auth/login",
-      formData.toString(), // ✅ IMPORTANT FIX
+      formData.toString(),
       {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -51,17 +51,14 @@ export default function LoginPage() {
         onSubmit={handleLogin}
         className="relative w-[420px] bg-neutral-900 border border-yellow-800/30 px-12 py-12 shadow-2xl"
       >
-        {/* ADDED: eyebrow label */}
         <p className="text-[10px] tracking-[0.25em] uppercase text-yellow-600 mb-2">
           Welcome Back
         </p>
 
-        {/* ADDED: serif heading — replaced original h2 styling */}
         <h2 className="text-3xl font-serif font-bold text-stone-100 mb-8">
           Sign In
         </h2>
 
-        {/* ADDED: label wrapper around original email input */}
         <div className="mb-5 group">
           <label className="block text-[10px] tracking-[0.18em] uppercase text-stone-500 mb-2 group-focus-within:text-yellow-600 transition-colors">
             Email Address
@@ -75,26 +72,30 @@ export default function LoginPage() {
           />
         </div>
 
-        {/* ADDED: label wrapper around original password input */}
-        <div className="mb-1 group">
+        {/* ✅ Password with eye toggle */}
+        <div className="mb-6 group relative">
           <label className="block text-[10px] tracking-[0.18em] uppercase text-stone-500 mb-2 group-focus-within:text-yellow-600 transition-colors">
             Password
           </label>
+
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="••••••••"
-            className="w-full bg-neutral-950 border border-stone-700/50 text-stone-100 text-sm font-light placeholder-stone-700 px-4 py-3 outline-none focus:border-yellow-700/60 focus:ring-1 focus:ring-yellow-700/20 transition-all"
+            className="w-full bg-neutral-950 border border-stone-700/50 text-stone-100 text-sm font-light placeholder-stone-700 px-4 py-3 pr-10 outline-none focus:border-yellow-700/60 focus:ring-1 focus:ring-yellow-700/20 transition-all"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-[38px] text-stone-500 hover:text-yellow-600 transition-colors"
+          >
+            {showPassword ? "🙈" : "👁"}
+          </button>
         </div>
 
-        {/* ADDED: forgot password link */}
-        <div className="flex justify-end mb-6">
-          <a href="/forgot-password" className="text-[11px] text-yellow-700/60 hover:text-yellow-600 transition-colors">
-            Forgot password?
-          </a>
-        </div>
+        {/* ❌ Forgot password removed */}
 
         <button
           type="submit"
@@ -104,7 +105,6 @@ export default function LoginPage() {
           {loading ? "Signing In..." : "Login"}
         </button>
 
-        {/* ADDED: register redirect */}
         <p className="mt-6 text-center text-xs text-stone-600">
           Don&apos;t have an account?{" "}
           <a href="/register" className="text-yellow-600 hover:opacity-70 transition-opacity font-medium">

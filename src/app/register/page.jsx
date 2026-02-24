@@ -11,6 +11,8 @@ export default function RegisterPage() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // ✅ added
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // ✅ added
 
   const handleChange = (e) => {
     setFormData({
@@ -48,38 +50,93 @@ export default function RegisterPage() {
         onSubmit={handleRegister}
         className="relative w-[420px] bg-neutral-900 border border-yellow-800/30 px-12 py-12 shadow-2xl"
       >
-        {/* ADDED: eyebrow label */}
         <p className="text-[10px] tracking-[0.25em] uppercase text-yellow-600 mb-2">
           Get Started
         </p>
 
-        {/* ADDED: serif heading — replaced original h2 styling */}
         <h2 className="text-3xl font-serif font-bold text-stone-100 mb-8">
           Create Account
         </h2>
 
-        {/* ADDED: label + input wrappers around original inputs */}
-        {[
-          { label: "Full Name",        name: "name",             type: "text",     placeholder: "Jane Doe"           },
-          { label: "Email Address",    name: "email",            type: "email",    placeholder: "jane@example.com"   },
-          { label: "Password",         name: "password",         type: "password", placeholder: "••••••••"           },
-          { label: "Confirm Password", name: "confirm_password", type: "password", placeholder: "••••••••"           },
-        ].map(({ label, name, type, placeholder }) => (
-          <div key={name} className="mb-5 group">
-            <label className="block text-[10px] tracking-[0.18em] uppercase text-stone-500 mb-2 group-focus-within:text-yellow-600 transition-colors">
-              {label}
-            </label>
-            <input
-              type={type}
-              name={name}
-              placeholder={placeholder}
-              className="w-full bg-neutral-950 border border-stone-700/50 text-stone-100 text-sm font-light placeholder-stone-700 px-4 py-3 outline-none focus:border-yellow-700/60 focus:ring-1 focus:ring-yellow-700/20 transition-all"
-              value={formData[name]}
-              onChange={handleChange}
-              required
-            />
-          </div>
-        ))}
+        {/* Full Name */}
+        <div className="mb-5 group">
+          <label className="block text-[10px] tracking-[0.18em] uppercase text-stone-500 mb-2 group-focus-within:text-yellow-600 transition-colors">
+            Full Name
+          </label>
+          <input
+            type="text"
+            name="name"
+            placeholder="Jane Doe"
+            className="w-full bg-neutral-950 border border-stone-700/50 text-stone-100 text-sm font-light placeholder-stone-700 px-4 py-3 outline-none focus:border-yellow-700/60 focus:ring-1 focus:ring-yellow-700/20 transition-all"
+            value={formData.name}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        {/* Email */}
+        <div className="mb-5 group">
+          <label className="block text-[10px] tracking-[0.18em] uppercase text-stone-500 mb-2 group-focus-within:text-yellow-600 transition-colors">
+            Email Address
+          </label>
+          <input
+            type="email"
+            name="email"
+            placeholder="jane@example.com"
+            className="w-full bg-neutral-950 border border-stone-700/50 text-stone-100 text-sm font-light placeholder-stone-700 px-4 py-3 outline-none focus:border-yellow-700/60 focus:ring-1 focus:ring-yellow-700/20 transition-all"
+            value={formData.email}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        {/* Password with eye */}
+        <div className="mb-5 group relative">
+          <label className="block text-[10px] tracking-[0.18em] uppercase text-stone-500 mb-2 group-focus-within:text-yellow-600 transition-colors">
+            Password
+          </label>
+          <input
+            type={showPassword ? "text" : "password"}
+            name="password"
+            placeholder="••••••••"
+            className="w-full bg-neutral-950 border border-stone-700/50 text-stone-100 text-sm font-light placeholder-stone-700 px-4 py-3 pr-10 outline-none focus:border-yellow-700/60 focus:ring-1 focus:ring-yellow-700/20 transition-all"
+            value={formData.password}
+            onChange={handleChange}
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-[38px] text-stone-500 hover:text-yellow-600 transition-colors"
+          >
+            {showPassword ? "🙈" : "👁"}
+          </button>
+        </div>
+
+        {/* Confirm Password with eye */}
+        <div className="mb-5 group relative">
+          <label className="block text-[10px] tracking-[0.18em] uppercase text-stone-500 mb-2 group-focus-within:text-yellow-600 transition-colors">
+            Confirm Password
+          </label>
+          <input
+            type={showConfirmPassword ? "text" : "password"}
+            name="confirm_password"
+            placeholder="••••••••"
+            className="w-full bg-neutral-950 border border-stone-700/50 text-stone-100 text-sm font-light placeholder-stone-700 px-4 py-3 pr-10 outline-none focus:border-yellow-700/60 focus:ring-1 focus:ring-yellow-700/20 transition-all"
+            value={formData.confirm_password}
+            onChange={handleChange}
+            required
+          />
+          <button
+            type="button"
+            onClick={() =>
+              setShowConfirmPassword(!showConfirmPassword)
+            }
+            className="absolute right-4 top-[38px] text-stone-500 hover:text-yellow-600 transition-colors"
+          >
+            {showConfirmPassword ? "🙈" : "👁"}
+          </button>
+        </div>
 
         <button
           type="submit"
@@ -89,7 +146,6 @@ export default function RegisterPage() {
           {loading ? "Creating Account..." : "Register"}
         </button>
 
-        {/* ADDED: login redirect */}
         <p className="mt-6 text-center text-xs text-stone-600">
           Already have an account?{" "}
           <a href="/login" className="text-yellow-600 hover:opacity-70 transition-opacity font-medium">
