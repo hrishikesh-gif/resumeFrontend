@@ -180,7 +180,7 @@ export default function Dashboard() {
 
             <div>
               <label className="block mb-2 text-sm text-gray-400">
-                Upload Resume *
+                Upload Resume in PDF and DOCX format only*
               </label>
               <input
                   type="file"

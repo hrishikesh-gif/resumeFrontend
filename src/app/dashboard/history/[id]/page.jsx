@@ -121,6 +121,53 @@ export default function DetailPage() {
     }
   };
 
+  /* ✅ UPDATED DOWNLOAD FUNCTION */
+  const handleDownload = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        `http://localhost:8000/resumes/${id}/download`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Download failed");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+
+      const contentDisposition =
+        response.headers.get("Content-Disposition");
+
+      let fileName = "analysis.xlsx";
+
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?(.+)"?/);
+        if (match?.[1]) {
+          fileName = match[1];
+        }
+      }
+
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download error:", error);
+      alert("❌ Download failed");
+    }
+  };
+
   if (loading) return <div className="p-6">Loading...</div>;
   if (!data) return <div className="p-6">No data found.</div>;
 
@@ -178,7 +225,6 @@ export default function DetailPage() {
 
   return (
     <div className="p-6">
-      {/* Top Action Bar */}
       <div className="flex justify-between mb-6">
         <div className="flex gap-3">
           <button
@@ -212,13 +258,13 @@ export default function DetailPage() {
         Total Resumes: {data.total_resumes}
       </p>
 
-      <a
-        href={`http://localhost:8000/resumes/${id}/download`}
-        target="_blank"
+      {/* ✅ UPDATED DOWNLOAD BUTTON */}
+      <button
+        onClick={handleDownload}
         className="inline-block mb-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
       >
         Download Excel
-      </a>
+      </button>
 
       <div className="space-y-4">
         {data.results &&
