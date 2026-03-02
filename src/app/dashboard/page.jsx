@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { apiErrorToMessage } from "@/lib/apiError";
+
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_EXTENSIONS = [".pdf", ".docx"];
 
 export default function Dashboard() {
   const router = useRouter();
@@ -14,15 +18,28 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [analysisStatus, setAnalysisStatus] = useState(null);
 
-  // ==============================
-  // Get Logged In User
-  // ==============================
+  const canSubmit = !loading && jobDescription.trim().length > 0 && files.length > 0;
+
+  const validateFiles = (selectedFiles) => {
+    for (const file of selectedFiles) {
+      const name = file.name.toLowerCase();
+      const hasAllowedExtension = ALLOWED_EXTENSIONS.some((ext) => name.endsWith(ext));
+      if (!hasAllowedExtension) {
+        return `Unsupported file type: ${file.name}. Use PDF or DOCX only.`;
+      }
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        return `File too large: ${file.name}. Max allowed size is ${MAX_FILE_SIZE_BYTES} bytes.`;
+      }
+    }
+    return null;
+  };
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const res = await api.get("/auth/me");
         setUser(res.data);
-      } catch (err) {
+      } catch {
         router.push("/login");
       }
     };
@@ -30,17 +47,11 @@ export default function Dashboard() {
     fetchUser();
   }, [router]);
 
-  // ==============================
-  // Logout
-  // ==============================
   const handleLogout = () => {
     localStorage.removeItem("token");
     router.push("/login");
   };
 
-  // ==============================
-  // Polling Function
-  // ==============================
   const pollAnalysisStatus = (analysisId) => {
     const interval = setInterval(async () => {
       try {
@@ -49,30 +60,35 @@ export default function Dashboard() {
 
         if (data.status === "completed") {
           clearInterval(interval);
-          alert("Analysis Completed ✅");
+          alert("Analysis completed");
           router.push(`/dashboard/history/${analysisId}`);
+          return;
         }
-
-        if (data.status === "failed") {
-          clearInterval(interval);
-          alert("Analysis Failed ❌");
-        }
-
       } catch (err) {
         clearInterval(interval);
-        console.error("Polling error:", err);
+
+        if (err?.response?.status === 401) {
+          localStorage.removeItem("token");
+          router.push("/login");
+          return;
+        }
+
+        alert(apiErrorToMessage(err, "Polling failed"));
       }
-    }, 3000); // check every 3 seconds
+    }, 3000);
   };
 
-  // ==============================
-  // Submit Resume
-  // ==============================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!jobDescription || files.length === 0) {
-      alert("Job description and resume required ❌");
+    if (!jobDescription.trim() || files.length === 0) {
+      alert("Job description and at least one resume are required.");
+      return;
+    }
+
+    const validationError = validateFiles(files);
+    if (validationError) {
+      alert(validationError);
       return;
     }
 
@@ -83,29 +99,20 @@ export default function Dashboard() {
       const formData = new FormData();
       formData.append("job_role", jobRole);
       formData.append("job_description", jobDescription);
-
-      for (let i = 0; i < files.length; i++) {
-        formData.append("files", files[i]);
-      }
+      files.forEach((file) => formData.append("files", file));
 
       const res = await api.post("/resumes/analyze", formData);
-
-      const analysisId = res.data.analysis_id;
-
-      // Start polling
-      pollAnalysisStatus(analysisId);
+      pollAnalysisStatus(res.data.analysis_id);
 
       setJobRole("");
       setJobDescription("");
       setFiles([]);
-
     } catch (err) {
-      console.error(err);
-      alert("Something went wrong ❌");
+      alert(apiErrorToMessage(err, "Failed to start analysis"));
       setAnalysisStatus(null);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   if (!user) {
@@ -118,13 +125,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-
-      {/* ================= TOP NAV ================= */}
       <div className="flex justify-between items-center p-6 border-b border-neutral-800">
-
-        <h1 className="text-lg font-semibold">
-          Welcome, {user.name}
-        </h1>
+        <h1 className="text-lg font-semibold">Welcome, {user.name}</h1>
 
         <div className="flex gap-4">
           <button
@@ -143,20 +145,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ================= MAIN SECTION ================= */}
       <div className="flex justify-center mt-16 px-4">
         <div className="w-full max-w-xl bg-neutral-900 p-8 rounded shadow">
-
-          <h2 className="text-2xl font-bold mb-6 text-center">
-            Resume Analyzer
-          </h2>
+          <h2 className="text-2xl font-bold mb-6 text-center">Resume Analyzer</h2>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-
             <div>
-              <label className="block mb-2 text-sm text-gray-400">
-                Job Role *
-              </label>
+              <label className="block mb-2 text-sm text-gray-400">Job Role</label>
               <input
                 type="text"
                 value={jobRole}
@@ -167,9 +162,7 @@ export default function Dashboard() {
             </div>
 
             <div>
-              <label className="block mb-2 text-sm text-gray-400">
-                Job Description *
-              </label>
+              <label className="block mb-2 text-sm text-gray-400">Job Description *</label>
               <textarea
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
@@ -180,39 +173,41 @@ export default function Dashboard() {
 
             <div>
               <label className="block mb-2 text-sm text-gray-400">
-                Upload Resume in PDF and DOCX format only*
+                Upload resumes (PDF, DOCX only, max 5 MB each) *
               </label>
               <input
-                  type="file"
-                  multiple
-                  accept=".pdf,.doc,.docx"
-                  onChange={(e) => setFiles(e.target.files)}
-                  className="block w-full text-sm text-gray-700 
-                            file:mr-4 file:py-2 file:px-4
-                            file:rounded file:border-0
-                            file:text-sm file:font-semibold
-                            file:bg-blue-600 file:text-white
-                            hover:file:bg-blue-700
-                            cursor-pointer"
-            />
+                type="file"
+                multiple
+                accept=".pdf,.docx"
+                onChange={(e) => {
+                  const selectedFiles = Array.from(e.target.files || []);
+                  const validationError = validateFiles(selectedFiles);
+                  if (validationError) {
+                    alert(validationError);
+                    e.target.value = "";
+                    setFiles([]);
+                    return;
+                  }
+                  setFiles(selectedFiles);
+                }}
+                className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
+              />
             </div>
+
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-yellow-600 hover:bg-green-500 text-black py-3 rounded font-semibold"
+              disabled={!canSubmit}
+              className="w-full bg-yellow-600 hover:bg-green-500 text-black py-3 rounded font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Submitting..." : "Analyze Resume"}
             </button>
 
-            {/* 🔥 SHOW STATUS BELOW BUTTON */}
             {analysisStatus === "processing" && (
               <p className="text-yellow-400 text-center mt-3">
-                Processing resumes... Please wait ⏳
+                Processing resumes... Please wait
               </p>
             )}
-
           </form>
-
         </div>
       </div>
     </div>

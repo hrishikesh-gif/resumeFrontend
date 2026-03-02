@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import api from "@/lib/api";
 
 export default function HistoryPage() {
   const [analyses, setAnalyses] = useState([]);
@@ -11,20 +12,14 @@ export default function HistoryPage() {
   useEffect(() => {
     const fetchAnalyses = async () => {
       try {
-        const token = localStorage.getItem("token");
-
-        const res = await fetch(
-          "http://localhost:8000/resumes/my-analyses",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        const data = await res.json();
-        setAnalyses(data);
+        const res = await api.get("/resumes/my-analyses");
+        setAnalyses(res.data);
       } catch (error) {
+        if (error?.response?.status === 401) {
+          localStorage.removeItem("token");
+          router.push("/login");
+          return;
+        }
         console.error("Error fetching analyses:", error);
       } finally {
         setLoading(false);
@@ -32,7 +27,7 @@ export default function HistoryPage() {
     };
 
     fetchAnalyses();
-  }, []);
+  }, [router]);
 
   if (loading) return <div className="p-6">Loading...</div>;
 

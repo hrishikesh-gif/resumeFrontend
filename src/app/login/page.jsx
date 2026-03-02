@@ -1,49 +1,45 @@
 "use client";
 import { useState } from "react";
 import api from "@/lib/api";
+import { apiErrorToMessage } from "@/lib/apiError";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // ✅ added
+  const [showPassword, setShowPassword] = useState(false);
 
- const handleLogin = async (e) => {
-  e.preventDefault();
+  const handleLogin = async (e) => {
+    e.preventDefault();
 
-  if (!email || !password) {
-    alert("Please fill all fields ❌");
-    return;
-  }
+    if (!email || !password) {
+      alert("Please fill all fields");
+      return;
+    }
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    const formData = new URLSearchParams();
-    formData.append("username", email);
-    formData.append("password", password);
+    try {
+      const formData = new URLSearchParams();
+      formData.append("username", email.trim());
+      formData.append("password", password);
 
-    const res = await api.post(
-      "/auth/login",
-      formData.toString(),
-      {
+      const res = await api.post("/auth/login", formData.toString(), {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-      }
-    );
+      });
 
-    localStorage.setItem("token", res.data.access_token);
+      localStorage.setItem("token", res.data.access_token);
+      alert("Login Successful");
+      window.location.href = "/dashboard";
+    } catch (err) {
+      console.error("Login error:", err);
+      alert(apiErrorToMessage(err, "Login failed"));
+    }
 
-    alert("Login Successful ✅");
-    window.location.href = "/dashboard";
-  } catch (err) {
-    console.error("Login error:", err.response?.data);
-    alert("Invalid credentials ❌");
-  }
-
-  setLoading(false);
-};
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-950">
@@ -72,7 +68,6 @@ export default function LoginPage() {
           />
         </div>
 
-        {/* ✅ Password with eye toggle */}
         <div className="mb-6 group relative">
           <label className="block text-[10px] tracking-[0.18em] uppercase text-stone-500 mb-2 group-focus-within:text-yellow-600 transition-colors">
             Password
@@ -80,7 +75,7 @@ export default function LoginPage() {
 
           <input
             type={showPassword ? "text" : "password"}
-            placeholder="••••••••"
+            placeholder="........"
             className="w-full bg-neutral-950 border border-stone-700/50 text-stone-100 text-sm font-light placeholder-stone-700 px-4 py-3 pr-10 outline-none focus:border-yellow-700/60 focus:ring-1 focus:ring-yellow-700/20 transition-all"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -91,11 +86,9 @@ export default function LoginPage() {
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-4 top-[38px] text-stone-500 hover:text-yellow-600 transition-colors"
           >
-            {showPassword ? "🙈" : "👁"}
+            {showPassword ? "Hide" : "Show"}
           </button>
         </div>
-
-        {/* ❌ Forgot password removed */}
 
         <button
           type="submit"

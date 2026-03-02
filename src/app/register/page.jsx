@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import api from "@/lib/api";
+import { apiErrorToMessage } from "@/lib/apiError";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -38,7 +39,7 @@ export default function RegisterPage() {
       window.location.href = "/login";
     } catch (err) {
       console.error(err);
-      alert("Registration Failed ❌");
+      alert(apiErrorToMessage(err, "Registration failed"));
     }
 
     setLoading(false);

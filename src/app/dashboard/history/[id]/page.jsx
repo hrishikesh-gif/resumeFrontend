@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import api from "@/lib/api";
+import { apiErrorToMessage } from "@/lib/apiError";
 
 /* ================= Candidate Card Component ================= */
 function CandidateCard({ candidate }) {
@@ -67,51 +69,33 @@ export default function DetailPage() {
   useEffect(() => {
     const fetchDetail = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const res = await api.get(`/resumes/${id}`);
+        setData(res.data);
+      } catch (err) {
+        const status = err?.response?.status;
 
-        const res = await fetch(
-          `http://localhost:8000/resumes/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        // 🔥 Handle all status codes
-        if (!res.ok) {
-          switch (res.status) {
-            case 401:
-              localStorage.removeItem("token");
-              router.push("/login");
-              return;
-
-            case 403:
-              setError("🚫 Access denied.");
-              return;
-
-            case 404:
-              setError("❌ Analysis not found.");
-              return;
-
-            case 429:
-              setError("⚠️ Quota exceeded. Please try again later.");
-              return;
-
-            case 500:
-              setError("🔥 Server error. Please retry.");
-              return;
-
-            default:
-              setError("Something went wrong.");
-              return;
-          }
+        if (status === 401) {
+          localStorage.removeItem("token");
+          router.push("/login");
+          return;
+        }
+        if (status === 403) {
+          setError("🚫 Access denied.");
+          return;
+        }
+        if (status === 404) {
+          setError("❌ Analysis not found.");
+          return;
+        }
+        if (status === 429) {
+          setError("⚠️ Quota exceeded. Please try again later.");
+          return;
+        }
+        if (status === 500) {
+          setError("🔥 Server error. Please retry.");
+          return;
         }
 
-        const result = await res.json();
-        setData(result);
-
-      } catch (err) {
         setError("Network error. Please check your connection.");
       } finally {
         setLoading(false);
@@ -129,74 +113,32 @@ export default function DetailPage() {
     if (!confirmDelete) return;
 
     try {
-      const token = localStorage.getItem("token");
+      await api.delete(`/resumes/${id}`);
 
-      const res = await fetch(
-        `http://localhost:8000/resumes/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (res.status === 401) {
+      alert("✅ Analysis deleted successfully");
+      router.push("/dashboard/history");
+    } catch (error) {
+      if (error?.response?.status === 401) {
         localStorage.removeItem("token");
         router.push("/login");
         return;
       }
-
-      if (!res.ok) {
-        alert("Failed to delete analysis.");
-        return;
-      }
-
-      alert("✅ Analysis deleted successfully");
-      router.push("/dashboard/history");
-
-    } catch (error) {
-      alert("Something went wrong");
+      alert(apiErrorToMessage(error, "Failed to delete analysis"));
     }
   };
 
   const handleDownload = async () => {
     try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(
-        `http://localhost:8000/resumes/${id}/download`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.status === 401) {
-        localStorage.removeItem("token");
-        router.push("/login");
-        return;
-      }
-
-      if (response.status === 429) {
-        alert("⚠️ Quota exceeded. Cannot download.");
-        return;
-      }
-
-      if (!response.ok) {
-        alert("Download failed.");
-        return;
-      }
-
-      const blob = await response.blob();
+      const response = await api.get(`/resumes/${id}/download`, {
+        responseType: "blob",
+      });
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
 
       const a = document.createElement("a");
       a.href = url;
 
-      const contentDisposition =
-        response.headers.get("Content-Disposition");
+      const contentDisposition = response.headers["content-disposition"];
 
       let fileName = "analysis.xlsx";
 
@@ -214,7 +156,16 @@ export default function DetailPage() {
       window.URL.revokeObjectURL(url);
 
     } catch (error) {
-      alert("Download failed.");
+      if (error?.response?.status === 401) {
+        localStorage.removeItem("token");
+        router.push("/login");
+        return;
+      }
+      if (error?.response?.status === 429) {
+        alert(apiErrorToMessage(error, "Quota exceeded. Cannot download."));
+        return;
+      }
+      alert(apiErrorToMessage(error, "Download failed"));
     }
   };
 
@@ -239,6 +190,13 @@ export default function DetailPage() {
             className="bg-blue-500 text-white px-4 py-2 rounded"
           >
             Dashboard
+          </button>
+
+          <button
+            onClick={handleDelete}
+            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            Delete
           </button>
         </div>
       </div>
